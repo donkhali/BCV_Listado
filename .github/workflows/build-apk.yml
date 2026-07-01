@@ -1,0 +1,48 @@
+name: Generar APK Móvil
+on:
+  push:
+    branches: [ main ] # Se ejecutará cada vez que hagas un cambio en la rama main
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configurar Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Instalar Apache Cordova
+        run: npm install -g cordova
+
+      - name: Crear Contenedor Android y Empaquetar HTML
+        run: |
+          # Crear un proyecto interno de Cordova
+          cordova create contenedor com.donkhali.bcv ResumenBCV
+          cd contenedor
+          
+          # Añadir la plataforma Android
+          cordova platform add android
+          
+          # Limpiar los archivos por defecto y copiar tu index.html
+          rm -rf www/*
+          cp ../index.html www/
+          
+          # Compilar la APK en modo debug (libre de firmas complejas)
+          cordova build android --device --no-telemetry
+
+      - name: Subir APK terminada como Artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: ResumenBCV-Instalador-APK
+          path: contenedor/platforms/android/app/build/outputs/apk/debug/app-debug.apk
