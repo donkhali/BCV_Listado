@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>BCV | Dólar y Euro oficial - Depreciación, Proyección y Días No Bancarios</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        /* ========== ESTILOS COMPLETOS (SIN CAMBIOS) ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-body: #f4f6fb;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #334155;
+            --border: #e2e8f0;
+            --header-bg: #eef2f8;
+            --btn-bg: #0f3b4f;
+            --btn-hover: #1e5a72;
+            --table-hover: #fafcff;
+            --price-color: #0b4c6b;
+            --date-color: #334155;
+            --badge-bg: #eef2ff;
+            --badge-color: #1e3a5f;
+            --chart-grid: #cbd5e1;
+        }
+
+        body.dark {
+            --bg-body: #0a0c15;
+            --bg-card: #0f172a;
+            --text-primary: #eef2ff;
+            --text-secondary: #94a3b8;
+            --border: #1e293b;
+            --header-bg: #111827;
+            --btn-bg: #1e5a72;
+            --btn-hover: #2d6a8f;
+            --table-hover: #1e293b;
+            --price-color: #4ade80;
+            --date-color: #a0aec0;
+            --badge-bg: #1e293b;
+            --badge-color: #cbd5e1;
+            --chart-grid: #334155;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--bg-body);
+            padding: 2rem 1rem;
+            color: var(--text-primary);
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        .header {
+            padding: 1.5rem 1.8rem;
+            background: linear-gradient(135deg, #0a2b3e 0%, #0f3b4f 100%);
+            color: white;
+            border-radius: 1.5rem 1.5rem 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .header h1::before { content: "🇻🇪"; font-size: 1.8rem; }
+        .sub {
+            margin-top: 0.5rem;
+            opacity: 0.85;
+            font-size: 0.9rem;
+            border-left: 3px solid #facc15;
+            padding-left: 0.8rem;
+        }
+        .badge {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 40px;
+            padding: 0.2rem 0.7rem;
+            font-size: 0.7rem;
+            font-weight: 500;
+            display: inline-block;
+            margin-top: 0.75rem;
+        }
+
+        .theme-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 40px;
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            color: white;
+            transition: 0.2s;
+        }
+        .theme-btn:hover { background: rgba(255, 255, 255, 0.3); transform: scale(0.97); }
+
+        .filters-bar {
+            padding: 1rem 1.8rem;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: var(--bg-body);
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+        }
+        .filter-group label { font-weight: 600; color: var(--text-primary); font-size: 0.85rem; }
+        input[type="date"] {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.85rem;
+            font-family: inherit;
+            color: var(--text-primary);
+            cursor: pointer;
+            outline: none;
+        }
+        input[type="date"]:hover { border-color: #0f3b4f; }
+        .range-indicator, .record-count {
+            font-size: 0.8rem;
+            background: var(--badge-bg);
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            color: var(--badge-color);
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem 1.8rem;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+        }
+        .info-status {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 0.85rem;
+            background: var(--bg-body);
+            padding: 0.3rem 0.9rem;
+            border-radius: 30px;
+        }
+        .last-update { font-weight: 500; }
+        .refresh-btn {
+            background: var(--btn-bg);
+            border: none;
+            color: white;
+            padding: 0.4rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .refresh-btn:hover { background: var(--btn-hover); transform: scale(0.97); }
+        .loading {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .table-wrapper { overflow-x: auto; padding: 0 0 1rem 0; }
+        .bcv-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            min-width: 500px;
+        }
+        .bcv-table thead { background: var(--header-bg); border-bottom: 2px solid var(--border); }
+        .bcv-table th { text-align: left; padding: 1rem 1.2rem; font-weight: 600; color: var(--text-secondary); }
+        .bcv-table td { padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .bcv-table tbody tr:hover td { background-color: var(--table-hover); }
+        .price-cell { font-weight: 700; color: var(--price-color); }
+        .date-cell { font-family: monospace; font-weight: 500; color: var(--date-color); }
+        .no-data { text-align: center; padding: 2rem; font-style: italic; }
+
+        .footer-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1.2rem;
+            padding: 1rem 1.8rem;
+            border-top: 1px solid var(--border);
+            background: var(--bg-card);
+            flex-wrap: wrap;
+        }
+        .action-btn {
+            background: var(--btn-bg);
+            border: none;
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .action-btn:hover { background: var(--btn-hover); transform: scale(0.96); }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 1.5rem;
+            max-width: 950px;
+            width: 95%;
+            padding: 1.8rem;
+            box-shadow: 0 20px 35px -12px black;
+            color: var(--text-primary);
+        }
+        .modal-content h3 { margin-bottom: 1.2rem; display: flex; align-items: center; gap: 8px; }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; }
+        .modal-buttons button { padding: 0.4rem 1.2rem; border-radius: 40px; cursor: pointer; border: none; }
+        .resultado-depre, .resultado-proyeccion, .resultado-bancario {
+            margin-top: 1rem;
+            background: var(--badge-bg);
+            padding: 0.8rem;
+            border-radius: 1rem;
+            text-align: left;
+            font-weight: bold;
+            white-space: pre-wrap;
+            font-size: 0.85rem;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .close-modal { background: #ef4444; color: white; }
+        .footer-note {
+            background: var(--bg-body);
+            padding: 0.8rem 1.8rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            border-radius: 0 0 1.5rem 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .chart-container { margin: 1.5rem 0; height: 350px; position: relative; }
+        @media (max-width: 640px) {
+            body { padding: 1rem 0.5rem; }
+            .bcv-table th, .bcv-table td { padding: 0.5rem 0.8rem; font-size: 0.8rem; }
+            .header h1 { font-size: 1.4rem; }
+            .filters-bar, .filter-group { flex-direction: column; align-items: stretch; }
+            .footer-buttons { gap: 0.8rem; }
+            .action-btn { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
+            .modal-content { max-width: 95%; padding: 1rem; }
+            .chart-container { height: 250px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>Precio del Dólar y Euro · BCV Oficial</h1>
+            <div class="sub">Tasas de cambio publicadas por el Banco Central de Venezuela — Historial cronológico (descendente)</div>
+            <div class="badge">Fuente: API pública · DolarVZLA (rates.dolarvzla.com)</div>
+        </div>
+        <button class="theme-btn" id="themeToggleBtn">🌓 Cambiar tema</button>
+    </div>
+
+    <div class="filters-bar">
+        <div class="filter-group"><label>📅 Desde:</label><input type="date" id="fecha-inicio"></div>
+        <div class="filter-group"><label>📅 Hasta:</label><input type="date" id="fecha-fin"></div>
+        <div class="range-indicator" id="rango-activo">Seleccione un rango</div>
+        <div class="record-count" id="record-count">0 registros</div>
+    </div>
+
+    <div class="toolbar">
+        <div class="info-status"><span>🕘 Datos históricos</span><span class="last-update" id="update-time-label">—</span></div>
+        <button class="refresh-btn" id="refresh-table">🔄 Actualizar tabla</button>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="bcv-table">
+            <thead><tr><th>📅 Fecha (ISO)</th><th>USD/Bs</th><th>EUR/Bs</th></tr></thead>
+            <tbody id="table-body"><tr><td colspan="3" class="no-data">Cargando historial...</td></tbody>
+        </table>
+    </div>
+
+    <div class="footer-buttons">
+        <button id="btn-bcv" class="action-btn">🏦 BCV</button>
+        <button id="btn-depreciacion" class="action-btn">📉 DEPRECIACIÓN</button>
+        <button id="btn-proyeccion" class="action-btn">🔮 PROYECCIÓN</button>
+        <button id="btn-bancario" class="action-btn">🏦 BANCARIO</button>
+    </div>
+
+    <div class="footer-note">
+        <span>✔️ Datos oficiales del BCV. Actualización automática diaria.</span>
+        <span>⚡ API sin clave · CORS habilitado</span>
+    </div>
+</div>
+
+<!-- Modal Depreciación (con presentación mejorada) -->
+<div id="modal-depreciacion" class="modal">
+    <div class="modal-content">
+        <h3>📉 DEPRECIACIÓN DEL BOLÍVAR (USD/EUR)</h3>
+        <div class="filter-group" style="margin-bottom: 1rem;">
+            <label>📅 FECHA INICIAL:</label>
+            <input type="date" id="depre-fecha-inicio">
+            <label>📅 FECHA FINAL:</label>
+            <input type="date" id="depre-fecha-fin">
+            <button id="depre-calcular" style="background: var(--btn-bg); color:white; border-radius:40px; padding:0.3rem 1rem;">CALCULAR</button>
+            <button id="depre-cancelar" class="close-modal" style="background:#ef4444; color:white;">CANCELAR</button>
+        </div>
+        <div class="chart-container"><canvas id="depreciacionChart"></canvas></div>
+        <div id="depre-resultado" class="resultado-depre" style="display: none;"></div>
+    </div>
+</div>
+
+<!-- Modal Proyección -->
+<div id="modal-proyeccion" class="modal">
+    <div class="modal-content">
+        <h3>🔮 PROYECCIÓN DEL DÓLAR (USD) y EURO (EUR)</h3>
+        <div class="chart-container"><canvas id="proyeccionChart"></canvas></div>
+        <div id="proyeccion-resultado" class="resultado-proyeccion" style="display: none;"></div>
+        <div class="modal-buttons"><button id="proyeccion-cerrar" class="close-modal">CERRAR</button></div>
+    </div>
+</div>
+
+<!-- Modal Días No Bancarios -->
+<div id="modal-bancario" class="modal">
+    <div class="modal-content">
+        <h3>🏦 DÍAS NO BANCARIOS (FERIADOS)</h3>
+        <label>MES:</label><select id="bancario-month"></select>
+        <div class="modal-buttons"><button id="bancario-cancelar" class="close-modal">CANCELAR</button><button id="bancario-consultar" style="background: var(--btn-bg); color:white;">CONSULTAR</button></div>
+        <div id="bancario-resultado" class="resultado-bancario" style="display: none;"></div>
+    </div>
+</div>
+
+<script>
+    const BASE_API = 'https://rates.dolarvzla.com';
+    let allRates = [];
+    let currentStart = null, currentEnd = null;
+    let chartProyeccion = null;
+    let chartDepreciacion = null;
+
+    // DOM elements
+    const fechaInicio = document.getElementById('fecha-inicio');
+    const fechaFin = document.getElementById('fecha-fin');
+    const rangoActivoSpan = document.getElementById('rango-activo');
+    const recordCountSpan = document.getElementById('record-count');
+    const tbody = document.getElementById('table-body');
+    const refreshBtn = document.getElementById('refresh-table');
+    const updateLabel = document.getElementById('update-time-label');
+    const themeBtn = document.getElementById('themeToggleBtn');
+    const btnBCV = document.getElementById('btn-bcv');
+    const btnDepreciacion = document.getElementById('btn-depreciacion');
+    const btnProyeccion = document.getElementById('btn-proyeccion');
+    const btnBancario = document.getElementById('btn-bancario');
+    const modalDepre = document.getElementById('modal-depreciacion');
+    const depreFechaInicio = document.getElementById('depre-fecha-inicio');
+    const depreFechaFin = document.getElementById('depre-fecha-fin');
+    const depreCancelar = document.getElementById('depre-cancelar');
+    const depreCalcular = document.getElementById('depre-calcular');
+    const depreResultado = document.getElementById('depre-resultado');
+    const modalProyeccion = document.getElementById('modal-proyeccion');
+    const proyeccionCerrar = document.getElementById('proyeccion-cerrar');
+    const proyeccionResultado = document.getElementById('proyeccion-resultado');
+    const modalBancario = document.getElementById('modal-bancario');
+    const bancarioMonth = document.getElementById('bancario-month');
+    const bancarioCancelar = document.getElementById('bancario-cancelar');
+    const bancarioConsultar = document.getElementById('bancario-consultar');
+    const bancarioResultado = document.getElementById('bancario-resultado');
+
+    // Días no bancarios 2026
+    const feriadosTexto = [
+        "Jueves 01/01/2026","Martes 06/01/2026","Miércoles 14/01/2026","Lunes 16/02/2026","Martes 17/02/2026",
+        "Jueves 19/03/2026","Jueves 02/04/2026","Viernes 03/04/2026","Viernes 01/05/2026","Jueves 14/05/2026",
+        "Jueves 04/06/2026","Miércoles 24/06/2026","Lunes 29/06/2026","Viernes 24/07/2026","Viernes 11/09/2026",
+        "Lunes 12/10/2026","Lunes 26/10/2026","Miércoles 18/11/2026","Martes 08/12/2026","Jueves 24/12/2026",
+        "Viernes 25/12/2026","Jueves 31/12/2026"
+    ];
+    const feriados = feriadosTexto.map(texto => {
+        const partes = texto.split(' ');
+        const fechaStr = partes[1];
+        const [dia, mes, anio] = fechaStr.split('/');
+        return { fechaISO: `${anio}-${mes}-${dia}`, texto };
+    });
+    feriados.sort((a,b) => new Date(a.fechaISO) - new Date(b.fechaISO));
+
+    // Theme
+    if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
+    themeBtn.addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+        if (chartProyeccion) updateChartColors('proyeccion');
+        if (chartDepreciacion) updateChartColors('depreciacion');
+    });
+
+    // ---------- API y funciones base ----------
+    async function fetchAvailableDates() {
+        const resp = await fetch(`${BASE_API}/bcv/available-dates.json`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return await resp.json();
+    }
+    async function fetchRatesByMonth(year, month) {
+        const resp = await fetch(`${BASE_API}/bcv/${year}/${month}/list.json`);
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        return Array.isArray(data) ? data : [];
+    }
+    async function buildFullHistory() {
+        const availableDates = await fetchAvailableDates();
+        if (!availableDates.length) throw new Error('No hay fechas disponibles');
+        const monthMap = new Map();
+        for (const fd of availableDates) {
+            const [y,m] = fd.split('-');
+            const key = `${y}-${m}`;
+            if (!monthMap.has(key)) monthMap.set(key, []);
+            monthMap.get(key).push(fd);
+        }
+        const promises = Array.from(monthMap.keys()).map(async key => {
+            const [ys,ms] = key.split('-');
+            return await fetchRatesByMonth(parseInt(ys), parseInt(ms));
+        });
+        const monthly = await Promise.all(promises);
+        const allRaw = monthly.flat();
+        const valid = allRaw.filter(r => r && r.date && typeof r.usd === 'number' && r.usd > 0 && typeof r.eur === 'number' && r.eur > 0)
+                           .map(r => ({ date: r.date, usd: r.usd, eur: r.eur }));
+        if (!valid.length) throw new Error('No hay tasas válidas (USD/EUR)');
+        valid.sort((a,b) => new Date(a.date) - new Date(b.date));
+        return valid;
+    }
+    function getDefaultRange() {
+        if (!allRates.length) return { start: null, end: null };
+        const lastDate = allRates[allRates.length-1].date;
+        const datesSet = new Set(allRates.map(r=>r.date));
+        const today = new Date();
+        let candidate = new Date(today.getFullYear(), today.getMonth(), 1);
+        let foundStart = null;
+        for (let i=0; i<31; i++) {
+            const ds = candidate.toISOString().slice(0,10);
+            if (datesSet.has(ds)) { foundStart = ds; break; }
+            candidate.setDate(candidate.getDate()+1);
+        }
+        if (!foundStart) {
+            const last = new Date(lastDate);
+            last.setDate(1);
+            let prev = new Date(last);
+            for (let i=0; i<31; i++) {
+                const ds = prev.toISOString().slice(0,10);
+                if (datesSet.has(ds)) { foundStart = ds; break; }
+                prev.setDate(prev.getDate()+1);
+            }
+            if (!foundStart) foundStart = allRates[0].date;
+        }
+        return { start: foundStart, end: lastDate };
+    }
+    function getFilteredRatesDesc() {
+        if (!currentStart || !currentEnd) return [];
+        let filtered = allRates.filter(r => r.date >= currentStart && r.date <= currentEnd);
+        filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+        return filtered;
+    }
+    function renderTable(ratesDesc) {
+        if (!ratesDesc.length) {
+            tbody.innerHTML = `<tr><td colspan="3" class="no-data">📭 No hay registros en el rango seleccionado.`;
+            recordCountSpan.textContent = `0 registros`;
+            rangoActivoSpan.textContent = currentStart && currentEnd ? `Mostrando del ${currentStart} al ${currentEnd}` : 'Seleccione un rango';
+            return;
+        }
+        const fragment = document.createDocumentFragment();
+        for (const item of ratesDesc) {
+            const tr = document.createElement('tr');
+            const tdDate = document.createElement('td'); tdDate.className = 'date-cell'; tdDate.textContent = item.date;
+            const tdUsd = document.createElement('td'); tdUsd.className = 'price-cell'; tdUsd.textContent = new Intl.NumberFormat('es-VE', { minimumFractionDigits:2, maximumFractionDigits:4 }).format(item.usd) + ' Bs.';
+            const tdEur = document.createElement('td'); tdEur.className = 'price-cell'; tdEur.textContent = new Intl.NumberFormat('es-VE', { minimumFractionDigits:2, maximumFractionDigits:4 }).format(item.eur) + ' Bs.';
+            tr.appendChild(tdDate); tr.appendChild(tdUsd); tr.appendChild(tdEur);
+            fragment.appendChild(tr);
+        }
+        tbody.innerHTML = ''; tbody.appendChild(fragment);
+        recordCountSpan.textContent = `${ratesDesc.length} registro${ratesDesc.length !== 1 ? 's' : ''}`;
+        rangoActivoSpan.textContent = currentStart && currentEnd ? `Mostrando del ${currentStart} al ${currentEnd}` : 'Seleccione un rango';
+    }
+    function updateTable() { if (allRates.length) renderTable(getFilteredRatesDesc()); }
+    function syncDateInputs() { if (currentStart) fechaInicio.value = currentStart; if (currentEnd) fechaFin.value = currentEnd; }
+    function onDateChange() {
+        const start = fechaInicio.value, end = fechaFin.value;
+        if (!start || !end) return;
+        if (start > end) { alert("La fecha de inicio no puede ser mayor a la fecha de fin."); syncDateInputs(); return; }
+        currentStart = start; currentEnd = end; updateTable();
+    }
+    function updateTimestampLabel() {
+        const now = new Date();
+        const formatted = new Intl.DateTimeFormat('es-ES', { dateStyle:'medium', timeStyle:'short', hour12:false }).format(now);
+        if (updateLabel) updateLabel.textContent = `Última carga: ${formatted}`;
+    }
+    function getPriceOnDate(dateStr, currency = 'usd') {
+        const rate = allRates.find(r => r.date === dateStr);
+        return rate ? (currency === 'usd' ? rate.usd : rate.eur) : null;
+    }
+
+    // ---------- Gráfico depreciación ----------
+    function getMonthlyDataForRange(startDate, endDate) {
+        const filtered = allRates.filter(r => r.date >= startDate && r.date <= endDate);
+        if (filtered.length === 0) return { labels: [], usdData: [], eurData: [] };
+        const monthlyMap = new Map();
+        for (const rate of filtered) {
+            const key = rate.date.substring(0,7);
+            if (!monthlyMap.has(key) || rate.date > monthlyMap.get(key).date) {
+                monthlyMap.set(key, { date: rate.date, usd: rate.usd, eur: rate.eur });
+            }
+        }
+        const sortedKeys = Array.from(monthlyMap.keys()).sort();
+        const labels = [], usdData = [], eurData = [];
+        for (const key of sortedKeys) {
+            const val = monthlyMap.get(key);
+            labels.push(key);
+            usdData.push(val.usd);
+            eurData.push(val.eur);
+        }
+        return { labels, usdData, eurData };
+    }
+    function updateDepreciacionChart() {
+        const start = depreFechaInicio.value, end = depreFechaFin.value;
+        if (!start || !end) return;
+        if (start > end) { alert("La fecha de inicio no puede ser mayor a la fecha de fin."); return; }
+        const monthly = getMonthlyDataForRange(start, end);
+        if (monthly.labels.length === 0) {
+            if (chartDepreciacion) { chartDepreciacion.data.labels = []; chartDepreciacion.data.datasets[0].data = []; chartDepreciacion.data.datasets[1].data = []; chartDepreciacion.update(); }
+            return;
+        }
+        const ctx = document.getElementById('depreciacionChart').getContext('2d');
+        if (chartDepreciacion) {
+            chartDepreciacion.data.labels = monthly.labels;
+            chartDepreciacion.data.datasets[0].data = monthly.usdData;
+            chartDepreciacion.data.datasets[1].data = monthly.eurData;
+            chartDepreciacion.update();
+        } else {
+            chartDepreciacion = new Chart(ctx, {
+                type: 'line',
+                data: { labels: monthly.labels, datasets: [
+                    { label: 'USD/Bs', data: monthly.usdData, borderColor: getComputedStyle(document.body).getPropertyValue('--price-color').trim() || '#0b4c6b', backgroundColor: 'transparent', tension: 0.2, fill: false, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 },
+                    { label: 'EUR/Bs', data: monthly.eurData, borderColor: '#f59e0b', backgroundColor: 'transparent', tension: 0.2, fill: false, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 }
+                ] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { tooltip: { mode: 'index', intersect: false }, legend: { position: 'top', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
+                    scales: {
+                        y: { title: { display: true, text: 'Bolívares (Bs.)', color: getComputedStyle(document.body).getPropertyValue('--text-secondary') }, grid: { color: getComputedStyle(document.body).getPropertyValue('--chart-grid') } },
+                        x: { title: { display: true, text: 'Mes', color: getComputedStyle(document.body).getPropertyValue('--text-secondary') }, grid: { color: getComputedStyle(document.body).getPropertyValue('--chart-grid') } }
+                    }
+                }
+            });
+        }
+    }
+
+    // Depreciación: cálculo y presentación mejorada (similar a proyección)
+    function calcularDepreciacionYGrafico() {
+        const ini = depreFechaInicio.value, fin = depreFechaFin.value;
+        if (!ini || !fin) { alert("Debe seleccionar ambas fechas."); return; }
+        if (ini > fin) { alert("La fecha inicial debe ser anterior o igual a la final."); return; }
+        const usdIni = getPriceOnDate(ini, 'usd'), usdFin = getPriceOnDate(fin, 'usd');
+        const eurIni = getPriceOnDate(ini, 'eur'), eurFin = getPriceOnDate(fin, 'eur');
+        if (usdIni === null || usdFin === null || eurIni === null || eurFin === null) {
+            alert("Una o ambas fechas no tienen registro de tasa (USD o EUR).");
+            return;
+        }
+        const depreciacionUSD = ((usdFin - usdIni) / usdIni) * 100;
+        const depreciacionEUR = ((eurFin - eurIni) / eurIni) * 100;
+        // Formato de presentación similar al de proyección
+        let resultado = `📉 DEPRECIACIÓN DEL BOLÍVAR\n\n`;
+        resultado += `📅 FECHA INICIAL: ${ini}\n`;
+        resultado += `USD: ${usdIni.toFixed(4)} Bs.\n`;
+        resultado += `EUR: ${eurIni.toFixed(4)} Bs.\n\n`;
+        resultado += `📅 FECHA FINAL: ${fin}\n`;
+        resultado += `USD: ${usdFin.toFixed(4)} Bs.\n`;
+        resultado += `EUR: ${eurFin.toFixed(4)} Bs.\n\n`;
+        resultado += `📊 DEPRECIACIÓN USD: ${depreciacionUSD.toFixed(2)}%\n`;
+        resultado += `📊 DEPRECIACIÓN EUR: ${depreciacionEUR.toFixed(2)}%\n\n`;
+        resultado += `⚠️ El bolívar perdió valor frente a ambas monedas.`;
+        depreResultado.innerHTML = resultado.replace(/\n/g,'<br>');
+        depreResultado.style.display = 'block';
+        updateDepreciacionChart();
+    }
+
+    // ---------- PROYECCIÓN (gráfico y texto) ----------
+    function esDiaHabil(fecha) { const dia = fecha.getDay(); return dia !== 0 && dia !== 6; }
+    function obtenerTasaCrecimientoDiaria() {
+        if (allRates.length < 2) return 0;
+        let cambios = [];
+        for (let i = allRates.length-1; i > 0; i--) {
+            const fechaActual = new Date(allRates[i].date);
+            if (!esDiaHabil(fechaActual)) continue;
+            const precioActual = allRates[i].usd;
+            const precioAnterior = allRates[i-1].usd;
+            if (precioAnterior > 0) cambios.push((precioActual - precioAnterior) / precioAnterior);
+            if (cambios.length >= 30) break;
+        }
+        if (cambios.length === 0) return 0;
+        return cambios.reduce((a,b)=>a+b,0) / cambios.length;
+    }
+    function generarDiasHabiles(startDate, endDate) {
+        let fechas = [], current = new Date(startDate), end = new Date(endDate);
+        while (current <= end) { if (esDiaHabil(current)) fechas.push(new Date(current)); current.setDate(current.getDate()+1); }
+        return fechas;
+    }
+    function proyectar(precio, tasa, dias) { return precio * Math.pow(1 + tasa, dias); }
+
+    function getMonthlyCloses(monthsBack = 12) {
+        if (!allRates.length) return { labels: [], usdData: [], eurData: [] };
+        const today = new Date();
+        const labels = [], usdData = [], eurData = [];
+        for (let i = monthsBack; i >= 0; i--) {
+            let d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            let yearMes = d.getFullYear();
+            let mesNum = d.getMonth() + 1;
+            let ultimoDiaMes = new Date(yearMes, mesNum, 0);
+            let precioUSD = null, precioEUR = null;
+            for (let dd = ultimoDiaMes.getDate(); dd >= 1; dd--) {
+                const fechaStr = `${yearMes}-${mesNum.toString().padStart(2,'0')}-${dd.toString().padStart(2,'0')}`;
+                const rate = allRates.find(r => r.date === fechaStr);
+                if (rate) { precioUSD = rate.usd; precioEUR = rate.eur; break; }
+            }
+            labels.push(`${mesNum.toString().padStart(2,'0')}/${yearMes}`);
+            usdData.push(precioUSD);
+            eurData.push(precioEUR);
+        }
+        return { labels, usdData, eurData };
+    }
+
+    function getProyeccionMensualHastaDiciembre() {
+        const hoy = new Date();
+        const anioActual = hoy.getFullYear();
+        const mesActual = hoy.getMonth();
+        const ultimaFechaStr = allRates[allRates.length-1].date;
+        const ultimaFechaObj = new Date(ultimaFechaStr);
+        const precioActualUSD = allRates[allRates.length-1].usd;
+        const precioActualEUR = allRates[allRates.length-1].eur;
+        const tasaDiaria = obtenerTasaCrecimientoDiaria();
+        const resultados = [];
+        for (let m = mesActual; m <= 11; m++) {
+            let ultimoDiaMes = new Date(anioActual, m + 1, 0);
+            while (!esDiaHabil(ultimoDiaMes)) ultimoDiaMes.setDate(ultimoDiaMes.getDate() - 1);
+            let fechaInicioProy;
+            let precioBaseUSD, precioBaseEUR;
+            if (m === mesActual) {
+                fechaInicioProy = new Date(ultimaFechaObj);
+                fechaInicioProy.setDate(fechaInicioProy.getDate() + 1);
+                precioBaseUSD = precioActualUSD;
+                precioBaseEUR = precioActualEUR;
+            } else {
+                const mesAnterior = resultados[resultados.length-1];
+                fechaInicioProy = new Date(mesAnterior.ultimoDia);
+                fechaInicioProy.setDate(fechaInicioProy.getDate() + 1);
+                precioBaseUSD = mesAnterior.proyUSD;
+                precioBaseEUR = mesAnterior.proyEUR;
+            }
+            if (fechaInicioProy > ultimoDiaMes) {
+                resultados.push({ mes: m+1, anio: anioActual, proyUSD: precioBaseUSD, proyEUR: precioBaseEUR, ultimoDia: ultimoDiaMes.toISOString().slice(0,10), dias: 0 });
+                continue;
+            }
+            const diasHabiles = generarDiasHabiles(fechaInicioProy, ultimoDiaMes).length;
+            let proyUSD = precioBaseUSD, proyEUR = precioBaseEUR;
+            if (diasHabiles > 0 && tasaDiaria !== 0) {
+                proyUSD = proyectar(precioBaseUSD, tasaDiaria, diasHabiles);
+                proyEUR = proyectar(precioBaseEUR, tasaDiaria, diasHabiles);
+            }
+            resultados.push({ mes: m+1, anio: anioActual, proyUSD, proyEUR, ultimoDia: ultimoDiaMes.toISOString().slice(0,10), dias: diasHabiles });
+        }
+        return resultados;
+    }
+
+    function updateProyeccionChart() {
+        const ctx = document.getElementById('proyeccionChart').getContext('2d');
+        const monthlyHist = getMonthlyCloses(12);
+        const proyecciones = getProyeccionMensualHastaDiciembre();
+        const labelsSet = new Set();
+        monthlyHist.labels.forEach(l => labelsSet.add(l));
+        proyecciones.forEach(p => labelsSet.add(`${p.mes.toString().padStart(2,'0')}/${p.anio}`));
+        const allLabels = Array.from(labelsSet).sort((a,b) => {
+            const [mesA, anioA] = a.split('/');
+            const [mesB, anioB] = b.split('/');
+            if (anioA !== anioB) return parseInt(anioA) - parseInt(anioB);
+            return parseInt(mesA) - parseInt(mesB);
+        });
+        const usdHist = allLabels.map(l => { const idx = monthlyHist.labels.indexOf(l); return idx !== -1 ? monthlyHist.usdData[idx] : null; });
+        const eurHist = allLabels.map(l => { const idx = monthlyHist.labels.indexOf(l); return idx !== -1 ? monthlyHist.eurData[idx] : null; });
+        const usdProy = allLabels.map(l => { const p = proyecciones.find(p => `${p.mes.toString().padStart(2,'0')}/${p.anio}` === l); return p ? p.proyUSD : null; });
+        const eurProy = allLabels.map(l => { const p = proyecciones.find(p => `${p.mes.toString().padStart(2,'0')}/${p.anio}` === l); return p ? p.proyEUR : null; });
+        if (chartProyeccion) {
+            chartProyeccion.data.labels = allLabels;
+            chartProyeccion.data.datasets[0].data = usdHist;
+            chartProyeccion.data.datasets[1].data = eurHist;
+            chartProyeccion.data.datasets[2].data = usdProy;
+            chartProyeccion.data.datasets[3].data = eurProy;
+            chartProyeccion.update();
+        } else {
+            chartProyeccion = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allLabels,
+                    datasets: [
+                        { label: 'USD/Bs (histórico)', data: usdHist, borderColor: getComputedStyle(document.body).getPropertyValue('--price-color').trim() || '#0b4c6b', backgroundColor: 'transparent', tension: 0.2, fill: false, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 },
+                        { label: 'EUR/Bs (histórico)', data: eurHist, borderColor: '#f59e0b', backgroundColor: 'transparent', tension: 0.2, fill: false, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 },
+                        { label: 'Proyección USD/Bs', data: usdProy, borderColor: '#10b981', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.2, fill: false, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 },
+                        { label: 'Proyección EUR/Bs', data: eurProy, borderColor: '#ec489a', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.2, fill: false, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { tooltip: { mode: 'index', intersect: false }, legend: { position: 'top', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
+                    scales: {
+                        y: { title: { display: true, text: 'Bolívares (Bs.)', color: getComputedStyle(document.body).getPropertyValue('--text-secondary') }, grid: { color: getComputedStyle(document.body).getPropertyValue('--chart-grid') } },
+                        x: { title: { display: true, text: 'Mes', color: getComputedStyle(document.body).getPropertyValue('--text-secondary') }, grid: { color: getComputedStyle(document.body).getPropertyValue('--chart-grid') } }
+                    }
+                }
+            });
+        }
+    }
+
+    function updateChartColors(which) {
+        const chart = which === 'proyeccion' ? chartProyeccion : chartDepreciacion;
+        if (chart) {
+            chart.options.plugins.legend.labels.color = getComputedStyle(document.body).getPropertyValue('--text-primary');
+            chart.options.scales.y.title.color = getComputedStyle(document.body).getPropertyValue('--text-secondary');
+            chart.options.scales.x.title.color = getComputedStyle(document.body).getPropertyValue('--text-secondary');
+            chart.options.scales.y.grid.color = getComputedStyle(document.body).getPropertyValue('--chart-grid');
+            chart.options.scales.x.grid.color = getComputedStyle(document.body).getPropertyValue('--chart-grid');
+            if (chart.data.datasets[0]) chart.data.datasets[0].borderColor = getComputedStyle(document.body).getPropertyValue('--price-color').trim() || '#0b4c6b';
+            chart.update();
+        }
+    }
+
+    function calcularProyeccionTexto() {
+        if (!allRates.length) { proyeccionResultado.innerHTML = "⚠️ NO HAY DATOS DISPONIBLES."; proyeccionResultado.style.display = 'block'; return; }
+        const hoy = new Date();
+        const year = hoy.getFullYear();
+        const month = hoy.getMonth();
+        const primerDiaMes = new Date(year, month, 1);
+        const ultimoDiaMes = new Date(year, month + 1, 0);
+        let ultimoDiaHabil = new Date(ultimoDiaMes);
+        while (!esDiaHabil(ultimoDiaHabil)) ultimoDiaHabil.setDate(ultimoDiaHabil.getDate() - 1);
+        const tasaDiaria = obtenerTasaCrecimientoDiaria();
+
+        // Primer día bursátil real
+        let primerDiaBursatil = null, precioPrimerUSD = null, precioPrimerEUR = null;
+        for (let d = 1; d <= 31; d++) {
+            const fechaTest = new Date(year, month, d);
+            if (fechaTest > ultimoDiaMes) break;
+            const fechaStr = fechaTest.toISOString().slice(0,10);
+            const usd = getPriceOnDate(fechaStr, 'usd');
+            const eur = getPriceOnDate(fechaStr, 'eur');
+            if (usd !== null && eur !== null) {
+                primerDiaBursatil = fechaStr;
+                precioPrimerUSD = usd;
+                precioPrimerEUR = eur;
+                break;
+            }
+        }
+
+        // Día 15 (ajuste a próximo lunes si cae fin de semana)
+        const fecha15Obj = new Date(year, month, 15);
+        let fecha15Proy = new Date(fecha15Obj);
+        if (fecha15Proy.getDay() === 0) fecha15Proy.setDate(fecha15Proy.getDate() + 1);
+        if (fecha15Proy.getDay() === 6) fecha15Proy.setDate(fecha15Proy.getDate() + 2);
+        if (fecha15Proy > ultimoDiaMes) fecha15Proy = ultimoDiaHabil;
+        const fecha15ProyStr = fecha15Proy.toISOString().slice(0,10);
+        let proy15USD = null, proy15EUR = null;
+        const ultimaFechaStr = allRates[allRates.length-1].date;
+        const ultimaFechaObj = new Date(ultimaFechaStr);
+        const precioActualUSD = allRates[allRates.length-1].usd;
+        const precioActualEUR = allRates[allRates.length-1].eur;
+        if (hoy > fecha15Proy) {
+            const realUSD = getPriceOnDate(fecha15ProyStr, 'usd');
+            const realEUR = getPriceOnDate(fecha15ProyStr, 'eur');
+            if (realUSD !== null && realEUR !== null) {
+                proy15USD = realUSD;
+                proy15EUR = realEUR;
+            } else {
+                let fechaInicio = new Date(ultimaFechaObj);
+                fechaInicio.setDate(fechaInicio.getDate() + 1);
+                const dias = generarDiasHabiles(fechaInicio, fecha15Proy).length;
+                if (dias > 0 && tasaDiaria !== 0) {
+                    proy15USD = proyectar(precioActualUSD, tasaDiaria, dias);
+                    proy15EUR = proyectar(precioActualEUR, tasaDiaria, dias);
+                } else {
+                    proy15USD = precioActualUSD;
+                    proy15EUR = precioActualEUR;
+                }
+            }
+        } else {
+            let fechaInicio = new Date(ultimaFechaObj);
+            fechaInicio.setDate(fechaInicio.getDate() + 1);
+            const dias = generarDiasHabiles(fechaInicio, fecha15Proy).length;
+            if (dias > 0 && tasaDiaria !== 0) {
+                proy15USD = proyectar(precioActualUSD, tasaDiaria, dias);
+                proy15EUR = proyectar(precioActualEUR, tasaDiaria, dias);
+            } else {
+                proy15USD = precioActualUSD;
+                proy15EUR = precioActualEUR;
+            }
+        }
+
+        // Proyección último día hábil del mes
+        let fechaInicioUlt = new Date(ultimaFechaObj);
+        fechaInicioUlt.setDate(fechaInicioUlt.getDate() + 1);
+        const diasUlt = generarDiasHabiles(fechaInicioUlt, ultimoDiaHabil).length;
+        let proyUltUSD = precioActualUSD, proyUltEUR = precioActualEUR;
+        if (diasUlt > 0 && tasaDiaria !== 0) {
+            proyUltUSD = proyectar(precioActualUSD, tasaDiaria, diasUlt);
+            proyUltEUR = proyectar(precioActualEUR, tasaDiaria, diasUlt);
+        }
+
+        let resultado = `🔮 PROYECCIÓN DEL MES EN CURSO (${(primerDiaMes.toISOString().slice(0,7))})\n\n`;
+        if (primerDiaBursatil && precioPrimerUSD !== null && precioPrimerEUR !== null) {
+            resultado += `📅 FECHA: ${primerDiaBursatil}\n`;
+            resultado += `USD: ${precioPrimerUSD.toFixed(4)} Bs.\n`;
+            resultado += `EUR: ${precioPrimerEUR.toFixed(4)} Bs.\n\n`;
+        } else {
+            resultado += `📅 FECHA: No disponible\nUSD: N/D\nEUR: N/D\n\n`;
+        }
+        resultado += `📌 DÍA 15: ${fecha15ProyStr}\n`;
+        resultado += `USD: ${proy15USD !== null ? proy15USD.toFixed(4) : 'N/D'} Bs.\n`;
+        resultado += `EUR: ${proy15EUR !== null ? proy15EUR.toFixed(4) : 'N/D'} Bs.\n\n`;
+        resultado += `📌 FECHA: ${ultimoDiaHabil.toISOString().slice(0,10)}\n`;
+        resultado += `USD: ${proyUltUSD.toFixed(4)} Bs.\n`;
+        resultado += `EUR: ${proyUltEUR.toFixed(4)} Bs.\n\n`;
+        resultado += `📆 DÍAS BANCARIOS RESTANTES: ${diasUlt}`;
+        proyeccionResultado.innerHTML = resultado.replace(/\n/g,'<br>');
+        proyeccionResultado.style.display = 'block';
+    }
+
+    function abrirModalProyeccion() {
+        proyeccionResultado.style.display = 'none';
+        modalProyeccion.style.display = 'flex';
+        calcularProyeccionTexto();
+        updateProyeccionChart();
+    }
+    function cerrarModalProyeccion() { modalProyeccion.style.display = 'none'; }
+
+    // Días no bancarios
+    function poblarSelectoresBancario() {
+        const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        bancarioMonth.innerHTML = '';
+        for (let i=0; i<12; i++) {
+            const opt = document.createElement('option');
+            opt.value = (i+1).toString().padStart(2,'0');
+            opt.textContent = meses[i];
+            bancarioMonth.appendChild(opt);
+        }
+        const hoy = new Date();
+        bancarioMonth.value = (hoy.getMonth()+1).toString().padStart(2,'0');
+    }
+    function consultarDiasNoBancarios() {
+        const month = bancarioMonth.value;
+        if (!month) return;
+        const feriadosMes = feriados.filter(f => f.fechaISO.split('-')[1] === month);
+        let resultado = `🚫 DÍAS NO BANCARIOS (FERIADOS) EN ${bancarioMonth.options[bancarioMonth.selectedIndex].text.toUpperCase()} 2026:\n\n`;
+        if (feriadosMes.length === 0) resultado += `⚠️ NO HAY DÍAS NO BANCARIOS EN ESTE MES.`;
+        else feriadosMes.forEach((f, idx) => { resultado += `${idx+1}. ${f.texto}\n`; });
+        bancarioResultado.innerHTML = resultado.replace(/\n/g,'<br>');
+        bancarioResultado.style.display = 'block';
+    }
+
+    function abrirModalDepreciacion() {
+        if (currentStart && currentEnd) { depreFechaInicio.value = currentStart; depreFechaFin.value = currentEnd; }
+        else if (allRates.length >= 2) { depreFechaInicio.value = allRates[allRates.length-2].date; depreFechaFin.value = allRates[allRates.length-1].date; }
+        depreResultado.style.display = 'none';
+        modalDepre.style.display = 'flex';
+        setTimeout(() => { updateDepreciacionChart(); }, 100);
+    }
+    function cerrarModalDepre() { modalDepre.style.display = 'none'; }
+    function abrirModalBancario() { poblarSelectoresBancario(); bancarioResultado.style.display = 'none'; modalBancario.style.display = 'flex'; }
+    function cerrarModalBancario() { modalBancario.style.display = 'none'; }
+
+    // Carga principal
+    let isLoading = false;
+    async function loadAllDataAndRender() {
+        if (isLoading) return;
+        isLoading = true;
+        refreshBtn.disabled = true;
+        refreshBtn.style.opacity = '0.6';
+        tbody.innerHTML = `<tr><td colspan="3" class="no-data"><span class="loading"></span> CONSULTANDO HISTORIAL OFICIAL DEL BCV...`;
+        try {
+            const history = await buildFullHistory();
+            allRates = history;
+            const { start, end } = getDefaultRange();
+            if (start && end) { currentStart = start; currentEnd = end; syncDateInputs(); }
+            else { currentStart = allRates[0]?.date; currentEnd = allRates[allRates.length-1]?.date; syncDateInputs(); }
+            updateTable();
+            updateTimestampLabel();
+        } catch (error) {
+            tbody.innerHTML = `<tr><td colspan="3" class="no-data">⚠️ ERROR: ${error.message}. VERIFIQUE CONEXIÓN.`;
+            recordCountSpan.textContent = `0 registros`;
+            if (updateLabel) updateLabel.textContent = 'ERROR EN LA CARGA';
+        } finally {
+            isLoading = false;
+            refreshBtn.disabled = false;
+            refreshBtn.style.opacity = '1';
+        }
+    }
+
+    // Eventos
+    fechaInicio.addEventListener('change', onDateChange);
+    fechaFin.addEventListener('change', onDateChange);
+    refreshBtn.addEventListener('click', () => loadAllDataAndRender());
+    btnBCV.addEventListener('click', () => loadAllDataAndRender());
+    btnDepreciacion.addEventListener('click', abrirModalDepreciacion);
+    btnProyeccion.addEventListener('click', abrirModalProyeccion);
+    btnBancario.addEventListener('click', abrirModalBancario);
+    depreCancelar.addEventListener('click', cerrarModalDepre);
+    depreCalcular.addEventListener('click', calcularDepreciacionYGrafico);
+    proyeccionCerrar.addEventListener('click', cerrarModalProyeccion);
+    bancarioCancelar.addEventListener('click', cerrarModalBancario);
+    bancarioConsultar.addEventListener('click', consultarDiasNoBancarios);
+    window.addEventListener('click', (e) => {
+        if (e.target === modalDepre) cerrarModalDepre();
+        if (e.target === modalProyeccion) cerrarModalProyeccion();
+        if (e.target === modalBancario) cerrarModalBancario();
+    });
+
+    loadAllDataAndRender();
+</script>
+</body>
+</html>
